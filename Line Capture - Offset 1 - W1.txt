@@ -1,0 +1,64 @@
+OBJECT Codeunit 60001 Line Capture - Offset 1
+{
+  OBJECT-PROPERTIES
+  {
+    Version List=DC;
+  }
+  PROPERTIES
+  {
+    TableNo=6085590;
+    OnRun=BEGIN
+            Code(Rec);
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      CaptureMgt@1160040001 : Codeunit 6085576;
+
+    PROCEDURE Code@1000000000(VAR Document@1000000000 : Record 6085590);
+    VAR
+      Value@1210050001 : Record 6085593;
+      TempDocLine@1000000001 : TEMPORARY Record 6085596;
+      LineNoField@1210050000 : Record 6085580;
+    BEGIN
+      //RUN STANDARD LINE CAPTURING CODEUNIT
+      CODEUNIT.RUN(CODEUNIT::"CDC Purch./Sales - Line Capt.",Document);
+
+      //GET FIELD FOR FIXED POSITION
+      LineNoField.GET(Document."Template No.",LineNoField.Type::Line,'NO');
+
+      //BUILD TEMPORARY LINE TABLE AND LOOP LINES
+      Document.BuildTempLinesTable(TempDocLine);
+      IF TempDocLine.FINDSET THEN
+        REPEAT
+
+          //STORE THE NO. VALUE INTO A DOCUMENT VALUE RECORD (WHICH CONTAINS POSITIONS)
+          CaptureMgt.GetFieldValue(Document,LineNoField,TempDocLine."Line No.",Value);
+
+          //GET THE QUANTITY AND UNIT COST VALUES WITH THE DOCUMENT VALUE POSITIONS
+          CaptureValue(LineNoField,TempDocLine,'UNITCOST',Value.Top + 50,Value.Left + 1250,Value.Bottom + 50,Value.Right + 1250);
+          CaptureValue(LineNoField,TempDocLine,'QUANTITY',Value.Top + 100,Value.Left + 1400,Value.Bottom + 100,Value.Right + 1400);
+
+        UNTIL TempDocLine.NEXT = 0;
+    END;
+
+    PROCEDURE CaptureValue@1210050000(VAR Field@1210050000 : Record 6085580;TempDocLine@1160040000 : TEMPORARY Record 6085596;FieldCode@1210050001 : Code[20];Top@1210050005 : Integer;Left@1210050006 : Integer;Bottom@1210050008 : Integer;Right@1210050007 : Integer);
+    VAR
+      OffsetField@1210050004 : Record 6085580;
+      Value@1160040007 : Record 6085593;
+      Page@1210050003 : Record 6085591;
+    BEGIN
+      Page.GET(TempDocLine."Document No.",TempDocLine."Page No.");
+
+      OffsetField.GET(Field."Template No.",OffsetField.Type::Line,FieldCode);
+
+      CaptureMgt.CaptureFromPos(Page,OffsetField,TempDocLine."Line No.",TRUE,Top,Left,Bottom,Right,Value)
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
